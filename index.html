@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Sorter</title>
+ <link rel="stylesheet" href="./style.css">
+  </style>
+</head>
+<body>
+  <h1 class="htext">JSON Difference<br> AdElement</h1>
+  <div class="container">
+    <div>
+      <h2 class="jsonnum">JSON 1</h2>
+      <textarea id="json1" placeholder="Enter JSON 1"></textarea>
+    </div>
+    <div>
+      <h2 class="jsonnum">JSON 2</h2>
+      <textarea id="json2" placeholder="Enter JSON 2"></textarea>
+    </div>
+  </div>
+  <button id="sortButton">Sort JSON</button>
+  <div class="output">
+    <h2 class="sortResult">Sorted Result</h2>
+    <table id="resultTable">
+      <thead>
+        <tr>
+          <th class="thtext">Attribute</th>
+          <th>Value in JSON 1</th>
+          <th>Value in JSON 2</th>
+        </tr>
+      </thead>
+      <tbody id="resultBody" class="thvtext"></tbody>
+    </table>
+  </div>
+
+  <script>
+    document.getElementById("sortButton").addEventListener("click", function() {
+      const json1 = JSON.parse(document.getElementById("json1").value);
+      const json2 = JSON.parse(document.getElementById("json2").value);
+      
+      const allAttributes = new Set([...getAllAttributes(json1), ...getAllAttributes(json2)]);
+      const sortedAttributes = [...allAttributes].sort();
+
+      const resultBody = document.getElementById("resultBody");
+      resultBody.innerHTML = "";
+
+      for (const attribute of sortedAttributes) {
+        const row = document.createElement("tr");
+        const cellAttribute = document.createElement("td");
+        const cellValue1 = document.createElement("td");
+        const cellValue2 = document.createElement("td");
+
+        cellAttribute.textContent = attribute;
+
+        if (attribute !== "device.geo") {
+          const value1 = getValueByAttribute(json1, attribute);
+          const value2 = getValueByAttribute(json2, attribute);
+
+          if (value1 === undefined) {
+            cellValue1.className = "missing-json1";
+          }
+
+          const valueDiff = compareValues(value1, value2);
+          if (value1 === undefined) {
+            cellValue1.className = "missing-value";
+          } else if (valueDiff) {
+            cellValue1.classList.add("different-value");
+          }
+
+          cellValue1.textContent = value1 === undefined ? "" : JSON.stringify(value1);
+          cellValue2.textContent = value2 === undefined ? "" : JSON.stringify(value2);
+
+          if (valueDiff) {
+            cellValue2.classList.add("different-value");
+          }
+        } else {
+          cellValue1.textContent = "Excluded";
+          cellValue2.textContent = "Excluded";
+          cellValue1.classList.add("excluded-value");
+          cellValue2.classList.add("excluded-value");
+        }
+
+        row.appendChild(cellAttribute);
+        row.appendChild(cellValue1);
+        row.appendChild(cellValue2);
+
+        resultBody.appendChild(row);
+      }
+    });
+
+    function getAllAttributes(obj, path = "") {
+      const attributes = new Set();
+
+      function traverse(obj, currentPath) {
+        for (const key in obj) {
+          if (key !== "device" && (currentPath || key !== "geo")) {
+            const newPath = currentPath ? `${currentPath}.${key}` : key;
+            attributes.add(newPath);
+            if (typeof obj[key] === "object" && obj[key] !== null) {
+              traverse(obj[key], newPath);
+            }
+          }
+        }
+      }
+
+      traverse(obj, path);
+      return attributes;
+    }
+
+    function getValueByAttribute(obj, attribute) {
+      const keys = attribute.split(".");
+      let value = obj;
+
+      for (const key of keys) {
+        if (value && value[key] !== undefined) {
+          value = value[key];
+        } else {
+          return undefined;
+        }
+      }
+
+      return value;
+    }
+
+    function compareValues(value1, value2) {
+      if (typeof value1 === "object" || typeof value2 === "object") {
+        return JSON.stringify(value1) !== JSON.stringify(value2);
+      }
+
+      return value1 !== value2;
+    }
+  </script>
+</body>
+</html>
